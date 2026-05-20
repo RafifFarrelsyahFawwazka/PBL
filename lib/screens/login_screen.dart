@@ -25,81 +25,31 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
+  final email = _emailController.text.trim();
+  final password = _passwordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email dan password wajib diisi!')),
+  try {
+    final client = Supabase.instance.client;
+
+    await client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
+
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const MainNavigationPage(),
+        ),
       );
-      return;
     }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // Trigger Supabase sign in
-      final client = Supabase.instance.client;
-      await client.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
-
-      if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const MainNavigationPage()),
-          (route) => false,
-        );
-      }
-    } catch (e) {
-      final errorStr = e.toString();
-      // Handle uninitialized state gracefully (fallback to offline mock login)
-      if (errorStr.contains('has not been initialized') || errorStr.contains('StateError')) {
-        await Future.delayed(const Duration(milliseconds: 800));
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Mode Simulasi: Masuk berhasil secara lokal!'),
-              backgroundColor: Colors.blue,
-              duration: Duration(seconds: 2),
-            ),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const MainNavigationPage()),
-            (route) => false,
-          );
-        }
-      } else if (e is AuthException) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(e.message),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Terjadi kesalahan: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
+  } on AuthException catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.message)),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {

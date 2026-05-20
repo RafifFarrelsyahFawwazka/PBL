@@ -24,84 +24,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  Future<void> _handleRegister() async {
-    final name = _nameController.text.trim();
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
+ Future<void> _handleRegister() async {
+  final name = _nameController.text.trim();
+  final email = _emailController.text.trim();
+  final password = _passwordController.text.trim();
 
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+  try {
+    final client = Supabase.instance.client;
+
+    await client.auth.signUp(
+      email: email,
+      password: password,
+      data: {
+        'display_name': name,
+      },
+    );
+
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Semua field wajib diisi!')),
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // Sign up using Supabase client
-      final client = Supabase.instance.client;
-      await client.auth.signUp(
-        email: email,
-        password: password,
-        data: {
-          'display_name': name,
-        },
+        const SnackBar(
+          content: Text('Registrasi berhasil'),
+        ),
       );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Registrasi Berhasil! Silakan periksa email untuk konfirmasi.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context); // Go back to login
-      }
-    } catch (e) {
-      final errorStr = e.toString();
-      // Handle uninitialized state gracefully (fallback to offline mock registration)
-      if (errorStr.contains('has not been initialized') || errorStr.contains('StateError')) {
-        await Future.delayed(const Duration(milliseconds: 800));
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Mode Simulasi: Registrasi berhasil secara lokal!'),
-              backgroundColor: Colors.blue,
-              duration: Duration(seconds: 2),
-            ),
-          );
-          Navigator.pop(context);
-        }
-      } else if (e is AuthException) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(e.message),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Terjadi kesalahan: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      Navigator.pop(context);
     }
+  } on AuthException catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.message)),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {
